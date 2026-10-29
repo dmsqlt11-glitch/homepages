@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>구미 식단 & 날씨</title>
+<style>
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --text: #1d2330;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --accent-soft: #e8efff;
+  --border: #e3e6ec;
+  --chip: #f1f3f7;
+  --special: #fff4e5;
+  --special-text: #b45309;
+  --rain: #2563eb;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1218;
+    --surface: #181c25;
+    --text: #e6e9ef;
+    --muted: #8b93a3;
+    --accent: #6ea8ff;
+    --accent-soft: #1d2a44;
+    --border: #262c38;
+    --chip: #222835;
+    --special: #3a2a14;
+    --special-text: #fbbf24;
+    --rain: #6ea8ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1218;
+  --surface: #181c25;
+  --text: #e6e9ef;
+  --muted: #8b93a3;
+  --accent: #6ea8ff;
+  --accent-soft: #1d2a44;
+  --border: #262c38;
+  --chip: #222835;
+  --special: #3a2a14;
+  --special-text: #fbbf24;
+  --rain: #6ea8ff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 40px; }
+header h1 { font-size: 1.35rem; margin: 0 0 4px; }
+header p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+h2.section {
+  font-size: 1.05rem;
+  margin: 26px 0 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+h2.section small { font-weight: 400; color: var(--muted); font-size: 0.78rem; }
+
+/* 날씨 스트립 */
+.weather-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.wcard {
+  flex: 0 0 96px;
+  scroll-snap-align: start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 6px;
+  text-align: center;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+}
+.wcard .wd { font-size: 0.8rem; color: var(--muted); }
+.wcard .wdate { font-size: 0.78rem; color: var(--muted); }
+.wcard .wicon { font-size: 1.6rem; margin: 4px 0; line-height: 1.2; }
+.wcard .wtemp { font-size: 0.9rem; font-weight: 600; }
+.wcard .wtemp span { color: var(--muted); font-weight: 400; }
+.wcard .wrain { font-size: 0.75rem; color: var(--rain); margin-top: 2px; }
+.wcard.has-menu { border-color: var(--accent); }
+.wcard.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+.wcard.selected .wd, .wcard.selected .wdate, .wcard.selected .wtemp span { color: rgba(255,255,255,0.85); }
+.wcard.selected .wrain { color: #fff; }
+.wnote { font-size: 0.78rem; color: var(--muted); margin: 0; }
+
+/* 식단 */
+.notice {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+.times {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.time {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+}
+.time strong { display: block; font-size: 0.9rem; }
+.time span { font-size: 0.78rem; color: var(--muted); }
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
+.tab {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 0;
+  font: inherit;
+  cursor: pointer;
+  position: relative;
+}
+.tab .day { font-weight: 700; font-size: 1rem; }
+.tab .date { display: block; font-size: 0.72rem; color: var(--muted); }
+.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tab[aria-selected="true"] .date { color: rgba(255,255,255,0.85); }
+.tab.today::after {
+  content: "";
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.tab[aria-selected="true"].today::after { background: #fff; }
+
+.day-weather {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 16px;
+}
+.day-weather .big { font-size: 2rem; line-height: 1; }
+.day-weather .info { flex: 1; }
+.day-weather .info strong { display: block; font-size: 0.98rem; }
+.day-weather .info span { font-size: 0.85rem; color: var(--muted); }
+.day-weather .temps { text-align: right; font-weight: 600; }
+.day-weather .temps span { display: block; font-size: 0.78rem; color: var(--rain); font-weight: 400; }
+
+.meals { margin-top: 12px; display: grid; gap: 12px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.card-head h3 { font-size: 1.05rem; margin: 0; }
+.card-head small { color: var(--muted); font-size: 0.78rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  background: var(--chip);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 0.9rem;
+}
+.empty {
+  text-align: center;
+  padding: 30px 16px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+}
+
+footer {
+  margin-top: 26px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.7;
+}
+footer a { color: var(--muted); }
+
+@media (max-width: 480px) {
+  .tab .day { font-size: 0.92rem; }
+  .chip { font-size: 0.85rem; padding: 4px 9px; }
+  .wcard { flex-basis: 84px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>구미 식단 & 날씨</h1>
+    <p>한국폴리텍대학 구미캠퍼스 · 구미시 15일 예보</p>
+  </header>
+
+  <h2 class="section">날씨 예보 <small>10/29 ~ 11/12</small></h2>
+  <div class="weather-strip" id="weatherStrip"></div>
+  <p class="wnote">날짜를 누르면 같은 날의 식단으로 이동합니다 (식단은 현재 주간만 제공).</p>
+
+  <h2 class="section">이번 주 식단 <small>10/26 ~ 10/30</small></h2>
+  <div class="notice">※ 식당 운영 및 식자재 수급 상황에 따라 메뉴가 변경될 수 있습니다.</div>
+
+  <div class="times">
+    <div class="time"><strong>아침</strong><span>07:50 ~ 08:40</span></div>
+    <div class="time"><strong>점심</strong><span>11:50 ~ 13:10</span></div>
+    <div class="time"><strong>저녁</strong><span>16:50 ~ 17:40<br>(수업 학생 월~목 18시까지)</span></div>
+  </div>
+
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div id="dayWeather"></div>
+  <div class="meals" id="meals"></div>
+
+  <footer>
+    식단 출처: <a href="https://www.kopo.ac.kr/gumi/content.do?menu=4941" target="_blank" rel="noopener">한국폴리텍대학 구미캠퍼스 식단정보</a><br>
+    날씨 출처: <a href="https://www.accuweather.com/ko/kr/gumi/223680/10-day-weather-forecast/223680" target="_blank" rel="noopener">AccuWeather</a> (예보 기준일 10/29, 변동 가능)
+  </footer>
+</div>
+
+<script>
+// 식단 데이터 (한국폴리텍대학 구미캠퍼스 식단정보, 주간 메뉴 기준 10/26~10/30으로 추정)
+const MENU = [
+  { day: "월", iso: "2026-10-26",
+    breakfast: ["컵밥", "음료"],
+    lunch: ["잡곡밥", "만둣국", "돈갈비찜", "꽃맛살샐러드", "오이양파무침", "포기김치"],
+    dinner: ["쌀밥", "얼큰쇠고기무국", "두부조림", "모듬강정", "호박당근볶음", "포기김치"] },
+  { day: "화", iso: "2026-10-27",
+    breakfast: ["모카크림빵", "흰우유"],
+    lunch: ["잡곡밥", "참치김치찌개", "어니언치킨까스", "건새우마늘쫑무침", "단배추생채", "깍두기"],
+    dinner: ["흰밥", "돼지국밥", "야채고로케/케찹", "풋고추된장무침", "부추양파무침", "석박지/요구르트"] },
+  { day: "수", iso: "2026-10-28",
+    breakfast: ["컵밥", "음료"],
+    lunch: ["나가사끼짬뽕", "마파두부", "깐쇼새우", "토마토샐러드/드레싱", "포기김치", "흰밥"],
+    dinner: ["흰밥", "유부장국", "불닭볶음닭", "맛감자/케이준S", "케요네즈", "포기김치"] },
+  { day: "목", iso: "2026-10-29",
+    breakfast: ["모카크림빵", "흰우유"],
+    lunch: ["잡곡밥", "조랭이미역국", "바싹불고기/파채", "무조림", "명엽채조림", "포기김치"],
+    dinner: ["흰밥", "부대찌개", "계란후라이", "청양멸치볶음", "상추양파무침", "포기김치"] },
+  { day: "금", iso: "2026-10-30",
+    breakfast: ["컵밥", "음료"],
+    lunch: ["콩나물밥/양념장", "바지락고추장찌개", "팽이버섯짬뽕조림", "도시락김", "포기김치", "음료"],
+    dinner: ["쌀밥", "계란탕", "오징어당면볶음", "강된장", "양배추찜/간장", "포기김치"] }
+];
+
+// 날씨 데이터 (AccuWeather 구미시 예보, 기준일 10/29, 섭씨 환산)
+// [요일, 날짜(ISO), 날씨, 최고(°C), 최저(°C), 강수확률(%)]
+const WEATHER = [
+  ["목", "2026-10-29", "흐리고 선선함", 13, 6, 3],
+  ["금", "2026-10-30", "흐릿함", 21, 7, 2],
+  ["토", "2026-10-31", "흐릿함", 18, 4, 0],
+  ["일", "2026-11-01", "선선하고 때때로 비", 10, 8, 91],
+  ["월", "2026-11-02", "맑음", 18, 3, 0],
+  ["화", "2026-11-03", "약간 흐림", 18, 6, 0],
+  ["수", "2026-11-04", "맑음", 18, 3, 0],
+  ["목", "2026-11-05", "약간 흐림", 19, 6, 2],
+  ["금", "2026-11-06", "맑음", 21, 6, 2],
+  ["토", "2026-11-07", "대체로 맑음", 17, 6, 2],
+  ["일", "2026-11-08", "흐리고 가벼운 비", 17, 6, 55],
+  ["월", "2026-11-09", "대체로 흐리고 가벼운 비", 18, 7, 55],
+  ["화", "2026-11-10", "대체로 흐림", 17, 7, 25],
+  ["수", "2026-11-11", "대체로 흐림", 13, 5, 25],
+  ["목", "2026-11-12", "흐림", 15, 6, 25]
+];
+
+const MEAL_LABELS = [
+  { key: "breakfast", label: "조식", time: "07:50 ~ 08:40" },
+  { key: "lunch", label: "중식", time: "11:50 ~ 13:10" },
+  { key: "dinner", label: "석식", time: "16:50 ~ 17:40" }
+];
+
+const tabsEl = document.getElementById("tabs");
+const mealsEl = document.getElementById("meals");
+const stripEl = document.getElementById("weatherStrip");
+const dayWeatherEl = document.getElementById("dayWeather");
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function iconFor(cond) {
+  if (cond.includes("비")) return "🌧️";
+  if (cond.includes("대체로 맑음")) return "🌤️";
+  if (cond.includes("맑음")) return "☀️";
+  if (cond.includes("흐")) return "☁️";
+  return "🌡️";
+}
+
+function todayIso() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function menuIndexByIso(iso) {
+  return MENU.findIndex(m => m.iso === iso);
+}
+
+function renderWeatherStrip(selectedIso) {
+  stripEl.innerHTML = WEATHER.map(([wd, iso, cond, hi, lo, rain]) => {
+    const [, m, d] = iso.split("-");
+    const hasMenu = menuIndexByIso(iso) !== -1;
+    const cls = ["wcard", hasMenu ? "has-menu" : "", iso === selectedIso ? "selected" : ""].join(" ").trim();
+    return `
+      <button class="${cls}" data-iso="${iso}" aria-label="${Number(m)}월 ${Number(d)}일 ${cond}">
+        <div class="wd">${wd}</div>
+        <div class="wdate">${Number(m)}/${Number(d)}</div>
+        <div class="wicon">${iconFor(cond)}</div>
+        <div class="wtemp">${hi}° <span>/ ${lo}°</span></div>
+        <div class="wrain">☔ ${rain}%</div>
+      </button>`;
+  }).join("");
+
+  stripEl.querySelectorAll(".wcard").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const iso = btn.dataset.iso;
+      const idx = menuIndexByIso(iso);
+      if (idx !== -1) {
+        renderDay(idx);
+      } else {
+        renderWeatherStrip(iso);
+        mealsEl.innerHTML = `<div class="empty">해당 날짜의 식단 정보는 제공되지 않습니다.</div>`;
+        dayWeatherEl.innerHTML = "";
+        tabsEl.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", "false"));
+      }
+    });
+  });
+}
+
+function renderTabs(selected) {
+  const today = todayIso();
+  tabsEl.innerHTML = "";
+  MENU.forEach((m, i) => {
+    const btn = document.createElement("button");
+    btn.className = "tab" + (m.iso === today ? " today" : "");
+    btn.setAttribute("role", "tab");
+    btn.setAttribute("aria-selected", i === selected ? "true" : "false");
+    const [, mm, dd] = m.iso.split("-");
+    btn.innerHTML = `<span class="day">${m.day}</span><span class="date">${Number(mm)}/${Number(dd)}</span>`;
+    btn.addEventListener("click", () => renderDay(i));
+    tabsEl.appendChild(btn);
+  });
+}
+
+function renderDayWeather(iso) {
+  const w = WEATHER.find(x => x[1] === iso);
+  if (!w) {
+    dayWeatherEl.innerHTML = "";
+    return;
+  }
+  const [wd, , cond, hi, lo, rain] = w;
+  dayWeatherEl.innerHTML = `
+    <div class="day-weather">
+      <div class="big">${iconFor(cond)}</div>
+      <div class="info">
+        <strong>${escapeHtml(cond)}</strong>
+        <span>구미시 · ${wd}요일 · 강수확률 ${rain}%</span>
+      </div>
+      <div class="temps">${hi}° / ${lo}°<span>최고 / 최저</span></div>
+    </div>`;
+}
+
+function renderChips(items) {
+  return items.map(item => `<span class="chip">${escapeHtml(item)}</span>`).join("");
+}
+
+function renderDay(i) {
+  const m = MENU[i];
+  renderTabs(i);
+  renderWeatherStrip(m.iso);
+  renderDayWeather(m.iso);
+
+  mealsEl.innerHTML = MEAL_LABELS.map(meal => {
+    const items = m[meal.key] || [];
+    const body = items.length
+      ? `<div class="chips">${renderChips(items)}</div>`
+      : `<div class="empty">운영 안내 없음</div>`;
+    return `
+      <section class="card">
+        <div class="card-head">
+          <h3>${meal.label}</h3>
+          <small>${meal.time}</small>
+        </div>
+        ${body}
+      </section>`;
+  }).join("");
+}
+
+// 시작: 오늘 날짜의 식단이 있으면 그 날, 없으면 목요일(10/29) 기준
+const todayIdx = menuIndexByIso(todayIso());
+renderDay(todayIdx !== -1 ? todayIdx : menuIndexByIso("2026-10-29"));
+</script>
+</body>
+</html>
